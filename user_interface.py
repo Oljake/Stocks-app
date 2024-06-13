@@ -1,5 +1,10 @@
 import customtkinter as ctk
 from typing import Dict
+import requests
+
+
+from get_data import get_crypto_data
+
 
 class CryptoApp:
     def __init__(self, root):
@@ -60,6 +65,11 @@ class CryptoApp:
 
         self.settings_window = None  # Placeholder for settings window reference
         self.settings_changed = False  # Track if settings have been changed
+        self.show_volume_var = ctk.BooleanVar()
+        self.show_price_var = ctk.BooleanVar()
+        self.show_d1_var = ctk.BooleanVar()
+        self.show_d7_var = ctk.BooleanVar()
+        self.show_d30_var = ctk.BooleanVar()
 
         self.update_holdings_display()
 
@@ -76,23 +86,23 @@ class CryptoApp:
 
         self.show_volume_var = ctk.BooleanVar()
         volume_cb = ctk.CTkCheckBox(master=self.settings_window, text="24-hour trading volume",
-                                    variable=self.show_volume_var)
+                                    variable=self.show_volume_var, command=self.disable_ok)
         volume_cb.pack(anchor='w')
 
         self.show_price_var = ctk.BooleanVar()
-        price_cb = ctk.CTkCheckBox(master=self.settings_window, text="Price", variable=self.show_price_var)
+        price_cb = ctk.CTkCheckBox(master=self.settings_window, text="Price", variable=self.show_price_var, command=self.disable_ok)
         price_cb.pack(anchor='w')
 
         self.show_d1_var = ctk.BooleanVar()
-        d1_cb = ctk.CTkCheckBox(master=self.settings_window, text="24h", variable=self.show_d1_var)
+        d1_cb = ctk.CTkCheckBox(master=self.settings_window, text="24h", variable=self.show_d1_var, command=self.disable_ok)
         d1_cb.pack(anchor='w')
 
         self.show_d7_var = ctk.BooleanVar()
-        d7_cb = ctk.CTkCheckBox(master=self.settings_window, text="7d", variable=self.show_d7_var)
+        d7_cb = ctk.CTkCheckBox(master=self.settings_window, text="7d", variable=self.show_d7_var, command=self.disable_ok)
         d7_cb.pack(anchor='w')
 
         self.show_d30_var = ctk.BooleanVar()
-        d30_cb = ctk.CTkCheckBox(master=self.settings_window, text="30d", variable=self.show_d30_var)
+        d30_cb = ctk.CTkCheckBox(master=self.settings_window, text="30d", variable=self.show_d30_var, command=self.disable_ok)
         d30_cb.pack(anchor='w')
 
         # OK and Apply Buttons
@@ -102,6 +112,9 @@ class CryptoApp:
 
         apply_button = ctk.CTkButton(master=self.settings_window, text="Apply", command=self.apply_settings)
         apply_button.pack(side=ctk.RIGHT, padx=10, pady=10)
+
+    def disable_ok(self):
+        self.ok_button.configure(state='disabled')
 
     def close_settings_window(self):
         if self.settings_window:
@@ -118,44 +131,63 @@ class CryptoApp:
         else:
             self.ok_button.configure(state='disabled')
 
-
-
-
     def add_crypto(self):
-        name = self.name_entry.get().strip()
+        currency = self.name_entry.get().strip()
         try:
             amount = float(self.amount_entry.get().strip())
         except ValueError:
             self.log_transaction("Invalid amount for adding.")
             return
 
-        if name and amount > 0:
-            if name in self.holdings:
-                self.holdings[name]['amount'] += amount
+        url = f"https://coinmarketcap.com/currencies/{currency}/"
+
+        try:
+            response = requests.get(url)
+            if response.status_code == 200:
+                price, volume, percentChange24h, percentChange7d, percentChange30d = get_crypto_data(response)
+                print(price, volume, percentChange24h, percentChange7d, percentChange30d)
+                if currency and amount > 0:
+                    if currency in self.holdings:
+                        self.holdings[currency]['amount'] += amount
+                        self.holdings[currency]['price'] = price
+                        self.holdings[currency]['volume'] = volume
+                        self.holdings[currency]['d1'] = percentChange24h
+                        self.holdings[currency]['d7'] = percentChange7d
+                        self.holdings[currency]['d30'] = percentChange30d
+                    else:
+                        self.holdings[currency] = {'amount': amount,
+                                                   'volume': volume,
+                                                   'price': price,
+                                                   'd1': percentChange24h,
+                                                   'd7': percentChange7d,
+                                                   'd30': percentChange30d}
+
+                    self.log_transaction(f"Added {amount} of {currency}.")
+                    self.update_holdings_display()
+                else:
+                    self.log_transaction("Invalid name or amount for adding.")
             else:
-                self.holdings[name] = {'amount': amount, 'volume': 'N/A', 'price': 'N/A', 'd1': 'N/A', 'd7': 'N/A', 'd30': 'N/A'}
-            self.log_transaction(f"Added {amount} of {name}.")
-            self.update_holdings_display()
-        else:
-            self.log_transaction("Invalid name or amount for adding.")
+                self.log_transaction(f"Failed to fetch data from {url}. Status code: {response.status_code}")
+        except requests.exceptions.RequestException as e:
+            self.log_transaction(f"Error fetching data from {url}: {str(e)}")
 
     def remove_crypto(self):
-        name = self.name_entry.get().strip()
+        currency = self.name_entry.get().strip()
         try:
             amount = float(self.amount_entry.get().strip())
         except ValueError:
             self.log_transaction("Invalid amount for removing.")
             return
 
-        if name in self.holdings and amount > 0:
-            if self.holdings[name]['amount'] >= amount:
-                self.holdings[name]['amount'] -= amount
-                self.log_transaction(f"Removed {amount} of {name}.")
-                if self.holdings[name]['amount'] == 0:
-                    del self.holdings[name]
+        if currency in self.holdings and amount > 0:
+            if self.holdings[currency]['amount'] >= amount:
+                self.holdings[currency]['amount'] -= amount
+                self.log_transaction(f"Removed {amount} of {currency}.")
+                if self.holdings[currency]['amount'] == 0:
+                    del self.holdings[currency]
                 self.update_holdings_display()
             else:
-                self.log_transaction(f"Not enough {name} to remove {amount}.")
+                self.log_transaction(f"Not enough {currency} to remove {amount}.")
         else:
             self.log_transaction("Invalid name or amount for removing.")
 
@@ -169,7 +201,21 @@ class CryptoApp:
         self.holdings_text.configure(state='normal')  # Enable editing
         self.holdings_text.delete("1.0", ctk.END)
         for name, data in self.holdings.items():
-            display_text = f"{name} {data['amount']}:\n"
+            display_text = ""
+
+            if data['price'] != "N/A":
+
+                amount = str(data['amount']).replace(',', '')
+                price = str(data['price']).replace(',', '')
+                display_text = f"{(name).capitalize()}:\n" \
+                               f"   Amount: {data['amount']}\n" \
+                               f"   Worth: {float(amount) * float(price)}\n\n" \
+
+            else:
+                display_text = \
+                    f"{name}:\n" \
+                    f"Current holdings:\n    N/A\n     {data['amount']}\n"
+
             if self.show_volume_var.get():
                 if data['volume'] == 'N/A':
                     display_text += f"  24-hour trading volume: N/A\n"
@@ -204,3 +250,4 @@ if __name__ == "__main__":
     root = ctk.CTk()
     app = CryptoApp(root)
     root.mainloop()
+

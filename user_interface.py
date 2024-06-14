@@ -1,7 +1,8 @@
+from decimal import Decimal, ROUND_HALF_UP
 from customtkinter import CTkButton
-import customtkinter as ctk
 from typing import Dict
 
+import customtkinter as ctk
 import requests
 import json
 
@@ -10,7 +11,7 @@ from new_coin import read_from_json
 
 class CryptoApp:
 
-    def __init__(self, root):
+    def __init__(self, root) -> None:
         self.root = root
         self.root.title("Crypto Portfolio Manager")
 
@@ -30,7 +31,7 @@ class CryptoApp:
         self.amount_entry = ctk.CTkEntry(master=self.entry_frame)
         self.amount_entry.pack(pady=5)
 
-        # Add and Remove Buttons
+        # Add / Remove Buttons
         self.button_frame = ctk.CTkFrame(master=self.entry_frame)
         self.button_frame.pack(pady=10)
 
@@ -80,10 +81,77 @@ class CryptoApp:
 
         self.unsaved_settings = set()
 
-        # Loadib useri crypto
-        self.update_holdings_display()
+        # Loadib User'i crypto-currency
+        self.load_current_holdings()
 
-    def load_settings(self):
+
+        self.root.protocol("WM_DELETE_WINDOW", self.close_app)
+
+    def close_app(self) -> None:
+        """Sulgeb äpi ilma erroriteta."""
+
+        # Sulgeb settingud
+        if self.settings_window:
+            self.settings_window.destroy()
+
+        # Kui settingud on suletud siis sulgeb main api
+        if self.root:
+            self.root.destroy()
+
+    def load_current_holdings(self) -> None:
+        """Laeb User'i hetkesed crypto-currency andmed Log'i."""
+
+        for currency, data in self.holdings.items():
+            amount: float = data['amount']
+            if amount == 0:
+                continue
+
+            url: str = f"https://coinmarketcap.com/currencies/{currency}/"
+
+            try:
+                response = requests.get(url)
+                if response.status_code == 200:
+
+                    # Extract'ib data
+                    price, volume, percentChange24h, percentChange7d, percentChange30d = get_crypto_data(response)
+
+                    if currency and amount > 0:
+
+                        # Võtab õige koguse ja muudab teised andmeid vastavalt Web'ile
+                        if currency in self.holdings:
+                            self.holdings[currency]['amount'] = amount
+                            self.holdings[currency]['price'] = price
+                            self.holdings[currency]['volume'] = volume
+                            self.holdings[currency]['d1'] = percentChange24h
+                            self.holdings[currency]['d7'] = percentChange7d
+                            self.holdings[currency]['d30'] = percentChange30d
+                        else:
+                            self.holdings[currency] = {'amount': amount,
+                                                       'volume': volume,
+                                                       'price': price,
+                                                       'd1': percentChange24h,
+                                                       'd7': percentChange7d,
+                                                       'd30': percentChange30d}
+
+                        # Log transaction ja andmete värskendamine
+                        self.log_transaction(f"Added {amount} of {currency}.")
+                        self.update_holdings_display()
+
+                        # Laeb uuendatud andmed JSON file'i
+                        self.save_to_json("current_holdings.json", self.holdings)
+
+                    else:
+                        self.log_transaction(f"Failed to fetch data from {url}. Status code: {response.status_code}")
+                else:
+                    self.log_transaction(f"Crypto-currency not found or incorrect name. "
+                                         f"Make sure it's listed \non the web: "
+                                         f"https://coinmarketcap.com/currencies/")
+            except requests.exceptions.RequestException as e:
+                self.log_transaction(f"Error fetching data from {url}: {str(e)}")
+
+    def load_settings(self) -> None:
+        """Laeb hetkesed api setting'ud"""
+
         for name, state in self.settings.items():
 
             if name == "volume_cb":
@@ -106,15 +174,20 @@ class CryptoApp:
             else:
                 button.select()
 
-    def open_settings_window(self):
+    def open_settings_window(self) -> None:
+        """Avab settings menu ja laeb vajalikud Widgets'id"""
+
         if self.settings_window:
-            self.settings_window.deiconify()  # Bring window to front if already exists
+            self.settings_window.deiconify()  # Toob window'i esile, kui see eksisteerib
             return
 
         self.settings_window = ctk.CTk()
         self.settings_window.title("Settings")
+        self.settings_window.overrideredirect(True)  # Peidab window'i TitleBar'i ja Border'id
 
-        # OK and Apply Buttons
+        self.settings_window.geometry("489x168")  # Default - 479x158
+
+        # OK ja Apply Button'id
         self.ok_button = ctk.CTkButton(master=self.settings_window, text="OK", command=self.close_settings_window)
         self.ok_button.pack(side=ctk.LEFT, padx=10, pady=10)
         self.ok_button.configure(state='disabled')
@@ -145,15 +218,23 @@ class CryptoApp:
                                       command=lambda: self.disable_ok(self.d30_cb))
         self.d30_cb.pack(anchor='w')
 
-    def disable_ok(self, checkbox):
+    def disable_ok(self, checkbox) -> None:
+        """Ei lase Ok Button'it vajutada"""
+
         self.ok_button.configure(state='disabled')
         self.unsaved_settings.add(checkbox)
 
-    def close_settings_window(self):
-        if self.settings_window:
-            self.settings_window.withdraw()  # Hide the settings window
+    def close_settings_window(self) -> None:
+        """Peidab settings menu"""
 
-    def apply_settings(self):
+        if self.settings_window:
+            self.settings_window.withdraw()
+
+    def apply_settings(self) -> None:
+        """
+        Salvestab muudetud settings'ud ja salvestab need JSON file'i.
+        Muudab Ok Button'i click'itavaks
+        """
 
         for checkbox in self.unsaved_settings:
             settings_name = str
@@ -188,8 +269,7 @@ class CryptoApp:
         self.unsaved_settings.clear()
         self.ok_button.configure(state='normal')
 
-
-        # Update holdings display according to settings
+        # Muudab Log'i andmeid setting'ute järgi
         self.update_holdings_display()
 
     def save_to_json(self, json_file: str, data: str) -> None:
@@ -202,25 +282,33 @@ class CryptoApp:
         Returns:
         - None
         """
+
         with open(json_file, 'w') as file:
             json.dump(data, file, indent=4)
 
-    def add_crypto(self):
-        currency = self.name_entry.get().strip()
+    def add_crypto(self) -> None:
+        """
+        Lisab uued crypto-currency andmed, kui sisestatud andmed
+        sobivad ja ka antud crypto-currency on web'is olemas.
+        """
+
+
+        currency = (self.name_entry.get()).lower().strip()
         try:
             amount = float(self.amount_entry.get().strip())
         except ValueError:
             self.log_transaction("Invalid amount for adding.")
             return
 
-        url = f"https://coinmarketcap.com/currencies/{currency}/"
+        url: str = f"https://coinmarketcap.com/currencies/{currency}/"
 
         try:
             response = requests.get(url)
             if response.status_code == 200:
                 price, volume, percentChange24h, percentChange7d, percentChange30d = get_crypto_data(response)
-                print(price, volume, percentChange24h, percentChange7d, percentChange30d)
                 if currency and amount > 0:
+
+                    # Lisab uue koguse ja muudab teised andmeid vastavalt Web'ile
                     if currency in self.holdings:
                         self.holdings[currency]['amount'] += amount
                         self.holdings[currency]['price'] = price
@@ -236,20 +324,29 @@ class CryptoApp:
                                                    'd7': percentChange7d,
                                                    'd30': percentChange30d}
 
-                    self.log_transaction(f"Added {amount} of {currency}.")
-                    self.update_holdings_display()
+                        # Log transaction ja andmete värskendamine
+                        self.log_transaction(f"Added {amount} of {currency}.")
+                        self.update_holdings_display()
 
-                    self.save_to_json("current_holdings.json", self.holdings)
+                        # Laeb uuendatud andmed JSON file'i
+                        self.save_to_json("current_holdings.json", self.holdings)
 
                 else:
                     self.log_transaction("Invalid name or amount for adding.")
             else:
-                self.log_transaction(f"Failed to fetch data from {url}. Status code: {response.status_code}")
+                self.log_transaction(f"crypto-currency not found or incorrect name. "
+                                     f"Make sure it's listed \non the web: "
+                                     f"https://coinmarketcap.com/currencies/")
         except requests.exceptions.RequestException as e:
             self.log_transaction(f"Error fetching data from {url}: {str(e)}")
 
-    def remove_crypto(self):
-        currency = self.name_entry.get().strip()
+    def remove_crypto(self) -> None:
+        """
+        Eemaldab sisestatud crypto-currency'lt sisestatud
+        koguse, kui see on User'i crypto-currency's
+        """        
+        
+        currency = (self.name_entry.get()).lower().strip()
         try:
             amount = float(self.amount_entry.get().strip())
         except ValueError:
@@ -269,14 +366,24 @@ class CryptoApp:
         else:
             self.log_transaction("Invalid name or amount for removing.")
 
-    def log_transaction(self, message: str):
+    def log_transaction(self, message: str) -> None:
+        """
+        Muudab Log'i korraks muudetavaks, ning
+        sel hetel lisab sinna antud sõnumi
+        """
+        
         self.log.append(message)
-        self.log_text.configure(state='normal')  # Enable editing
+        self.log_text.configure(state='normal')
         self.log_text.insert(ctk.END, message + "\n")
-        self.log_text.configure(state='disabled')  # Disable editing
+        self.log_text.configure(state='disabled')
 
-    def update_holdings_display(self):
-        self.holdings_text.configure(state='normal')  # Enable editing
+    def update_holdings_display(self) -> None:
+        """
+        Muudab Holdings Display'd vastavalt User'i
+        crypto-currency koguse ja andmetele
+        """
+        
+        self.holdings_text.configure(state='normal')
         self.holdings_text.delete("1.0", ctk.END)
         for name, data in self.holdings.items():
 
@@ -284,13 +391,20 @@ class CryptoApp:
                 continue
 
             display_text = ""
-            print(self.holdings.items())
             if data['price'] != "N/A":
-                amount = str(data['amount']).replace(',', '')
-                price = str(data['price']).replace(',', '')
+                amount = Decimal(str(data['amount']).replace(',', ''))
+                price = Decimal(str(data['price']).replace(',', ''))
+                worth = amount * price
+
+                # Ümardab kui väärtus on 1 või rohkem
+                if worth >= 1:
+                    formatted_worth = f"${worth:.2f} USD"
+                else:
+                    formatted_worth = f"${worth} USD"
+
                 display_text = f"{name.capitalize()}:\n" \
-                               f"  Amount: {data['amount']}\n" \
-                               f"  Worth: ${float(data['amount']) * float(price):,.2f} USD\n\n"
+                               f"  Amount: {amount}\n" \
+                               f"  Worth: {formatted_worth}\n\n"
 
             else:
                 display_text = \
@@ -328,7 +442,7 @@ class CryptoApp:
                     display_text += f"  30d: {round(float(data['d30']), 2)}%\n"
 
             self.holdings_text.insert(ctk.END, display_text + "\n")
-        self.holdings_text.configure(state='disabled')  # Disable editing
+        self.holdings_text.configure(state='disabled')
 
 
 if __name__ == "__main__":

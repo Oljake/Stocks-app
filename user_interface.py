@@ -7,7 +7,7 @@ import requests
 import json
 
 from get_data import get_crypto_data
-from new_coin import read_from_json
+from new_coin import add_to_json
 
 class CryptoApp:
 
@@ -331,12 +331,18 @@ class CryptoApp:
                         # Laeb uuendatud andmed JSON file'i
                         self.save_to_json("current_holdings.json", self.holdings)
 
+                        add_to_json([currency], "crypto_names.json")
+
                 else:
                     self.log_transaction("Invalid name or amount for adding.")
+
+            # if response.status_code == 404:  # Kui tuleb 404 siis on link vale
+
             else:
                 self.log_transaction(f"crypto-currency not found or incorrect name. "
                                      f"Make sure it's listed \non the web: "
                                      f"https://coinmarketcap.com/currencies/")
+                
         except requests.exceptions.RequestException as e:
             self.log_transaction(f"Error fetching data from {url}: {str(e)}")
 
@@ -344,8 +350,8 @@ class CryptoApp:
         """
         Eemaldab sisestatud crypto-currency'lt sisestatud
         koguse, kui see on User'i crypto-currency's
-        """        
-        
+        """
+
         currency = (self.name_entry.get()).lower().strip()
         try:
             amount = float(self.amount_entry.get().strip())
@@ -371,7 +377,7 @@ class CryptoApp:
         Muudab Log'i korraks muudetavaks, ning
         sel hetel lisab sinna antud sõnumi
         """
-        
+
         self.log.append(message)
         self.log_text.configure(state='normal')
         self.log_text.insert(ctk.END, message + "\n")
@@ -382,7 +388,7 @@ class CryptoApp:
         Muudab Holdings Display'd vastavalt User'i
         crypto-currency koguse ja andmetele
         """
-        
+
         self.holdings_text.configure(state='normal')
         self.holdings_text.delete("1.0", ctk.END)
         for name, data in self.holdings.items():

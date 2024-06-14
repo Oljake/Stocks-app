@@ -49,7 +49,7 @@ def get_crypto_data(currency_url: Response) -> Union[Tuple[str, str, str, str, s
         return price, volume, percentChange24h, percentChange7d, percentChange30d
 
 
-    except TypeError or UnboundLocalError as e:
+    except (TypeError, UnboundLocalError) as e:
         print("Most likely incorrect link.")
         print(f"get_data -> get_crypto_data:\n   {e}.\n\n")
 

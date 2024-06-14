@@ -1,13 +1,20 @@
-# Ainult vajalikud funcid
 from re import search
 from time import sleep
 from bs4 import BeautifulSoup
 from requests import Response, get
+from typing import Optional
+from dataclasses import dataclass
+from new_coin import read_from_json
 
-from typing import Tuple, Union  # Type hints
-from new_coin import read_from_json  # Loeb json failist crypto listi
+@dataclass
+class CryptoData:
+    price: Optional[str] = None
+    volume: Optional[str] = None
+    percentChange24h: Optional[str] = None
+    percentChange7d: Optional[str] = None
+    percentChange30d: Optional[str] = None
 
-def get_crypto_data(currency_url: Response) -> Union[Tuple[str, str, str, str, str], str]:
+def get_crypto_data(currency_url: Response) -> CryptoData:
     """
     Extract'ib' crypto-currency data antud URL'ist.
 

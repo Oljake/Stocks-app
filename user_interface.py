@@ -1,12 +1,15 @@
+from customtkinter import CTkButton
 import customtkinter as ctk
 from typing import Dict
-import requests
 
+import requests
+import json
 
 from get_data import get_crypto_data
-
+from new_coin import read_from_json
 
 class CryptoApp:
+
     def __init__(self, root):
         self.root = root
         self.root.title("Crypto Portfolio Manager")
@@ -59,19 +62,49 @@ class CryptoApp:
         self.holdings_text.pack(pady=5)
         self.holdings_text.configure(state='disabled')
 
-        # Create settings button
+        # Current holdings
+        with open('current_holdings.json', 'r') as file:
+            self.holdings = json.load(file)
+
+        # Settings
         self.settings_button = ctk.CTkButton(master=root, text="Settings", command=self.open_settings_window)
         self.settings_button.grid(row=2, column=0, pady=10, padx=10)
 
-        self.settings_window = None  # Placeholder for settings window reference
-        self.settings_changed = False  # Track if settings have been changed
-        self.show_volume_var = ctk.BooleanVar()
-        self.show_price_var = ctk.BooleanVar()
-        self.show_d1_var = ctk.BooleanVar()
-        self.show_d7_var = ctk.BooleanVar()
-        self.show_d30_var = ctk.BooleanVar()
+        self.settings_window = None
 
+        with open('settings.json', 'r') as file:
+            self.settings = json.load(file)
+
+        self.open_settings_window()
+        self.load_settings()
+
+        self.unsaved_settings = set()
+
+        # Loadib useri crypto
         self.update_holdings_display()
+
+    def load_settings(self):
+        for name, state in self.settings.items():
+
+            if name == "volume_cb":
+                button = self.volume_cb
+
+            elif name == "price_cb":
+                button = self.price_cb
+
+            elif name == "d1_cb":
+                button = self.d1_cb
+
+            elif name == "d7_cb":
+                button = self.d7_cb
+
+            elif name == "d30_cb":
+                button = self.d30_cb
+
+            if name and state == "off":
+                button.deselect()
+            else:
+                button.select()
 
     def open_settings_window(self):
         if self.settings_window:
@@ -81,55 +114,96 @@ class CryptoApp:
         self.settings_window = ctk.CTk()
         self.settings_window.title("Settings")
 
-        # Display Options
-        ctk.CTkLabel(master=self.settings_window, text="Display Options").pack(pady=5)
-
-        self.show_volume_var = ctk.BooleanVar()
-        volume_cb = ctk.CTkCheckBox(master=self.settings_window, text="24-hour trading volume",
-                                    variable=self.show_volume_var, command=self.disable_ok)
-        volume_cb.pack(anchor='w')
-
-        self.show_price_var = ctk.BooleanVar()
-        price_cb = ctk.CTkCheckBox(master=self.settings_window, text="Price", variable=self.show_price_var, command=self.disable_ok)
-        price_cb.pack(anchor='w')
-
-        self.show_d1_var = ctk.BooleanVar()
-        d1_cb = ctk.CTkCheckBox(master=self.settings_window, text="24h", variable=self.show_d1_var, command=self.disable_ok)
-        d1_cb.pack(anchor='w')
-
-        self.show_d7_var = ctk.BooleanVar()
-        d7_cb = ctk.CTkCheckBox(master=self.settings_window, text="7d", variable=self.show_d7_var, command=self.disable_ok)
-        d7_cb.pack(anchor='w')
-
-        self.show_d30_var = ctk.BooleanVar()
-        d30_cb = ctk.CTkCheckBox(master=self.settings_window, text="30d", variable=self.show_d30_var, command=self.disable_ok)
-        d30_cb.pack(anchor='w')
-
         # OK and Apply Buttons
         self.ok_button = ctk.CTkButton(master=self.settings_window, text="OK", command=self.close_settings_window)
         self.ok_button.pack(side=ctk.LEFT, padx=10, pady=10)
         self.ok_button.configure(state='disabled')
 
-        apply_button = ctk.CTkButton(master=self.settings_window, text="Apply", command=self.apply_settings)
-        apply_button.pack(side=ctk.RIGHT, padx=10, pady=10)
+        self.apply_button = ctk.CTkButton(master=self.settings_window, text="Apply", command=self.apply_settings)
+        self.apply_button.pack(side=ctk.RIGHT, padx=10, pady=10)
 
-    def disable_ok(self):
+        # Display Options
+        ctk.CTkLabel(master=self.settings_window, text="Display Options").pack(pady=5)
+
+        self.volume_cb = ctk.CTkCheckBox(master=self.settings_window, text="24-hour trading volume",
+                                         command=lambda: self.disable_ok(self.volume_cb))
+        self.volume_cb.pack(anchor='w')
+
+        self.price_cb = ctk.CTkCheckBox(master=self.settings_window, text="Price",
+                                        command=lambda: self.disable_ok(self.price_cb))
+        self.price_cb.pack(anchor='w')
+
+        self.d1_cb = ctk.CTkCheckBox(master=self.settings_window, text="24h",
+                                     command=lambda: self.disable_ok(self.d1_cb))
+        self.d1_cb.pack(anchor='w')
+
+        self.d7_cb = ctk.CTkCheckBox(master=self.settings_window, text="7d",
+                                     command=lambda: self.disable_ok(self.d7_cb))
+        self.d7_cb.pack(anchor='w')
+
+        self.d30_cb = ctk.CTkCheckBox(master=self.settings_window, text="30d",
+                                      command=lambda: self.disable_ok(self.d30_cb))
+        self.d30_cb.pack(anchor='w')
+
+    def disable_ok(self, checkbox):
         self.ok_button.configure(state='disabled')
+        self.unsaved_settings.add(checkbox)
 
     def close_settings_window(self):
         if self.settings_window:
             self.settings_window.withdraw()  # Hide the settings window
 
     def apply_settings(self):
+
+        for checkbox in self.unsaved_settings:
+            settings_name = str
+            settings_status = str
+
+            status = checkbox.get()
+            name = checkbox.cget('text')
+
+            if name == "24-hour trading volume":
+                settings_name = "volume_cb"
+
+            elif name == "Price":
+                settings_name = "price_cb"
+
+            elif name == "24h":
+                settings_name = "d1_cb"
+
+            elif name == "7d":
+                settings_name = "d7_cb"
+
+            elif name == "30d":
+                settings_name = "d30_cb"
+
+            if status == 0:
+                settings_status = "off"
+            else:
+                settings_status = "on"
+
+            self.settings[settings_name] = settings_status
+
+        self.save_to_json("settings.json", self.settings)
+        self.unsaved_settings.clear()
+        self.ok_button.configure(state='normal')
+
+
         # Update holdings display according to settings
         self.update_holdings_display()
 
-        # Check if any setting is changed
-        if (self.show_volume_var.get() or self.show_price_var.get() or
-            self.show_d1_var.get() or self.show_d7_var.get() or self.show_d30_var.get()):
-            self.ok_button.configure(state='normal')
-        else:
-            self.ok_button.configure(state='disabled')
+    def save_to_json(self, json_file: str, data: str) -> None:
+        """
+        Kustutab faili sisu ära ning lisab antud info.
+
+        Parameters:
+        - json_file (str): Fail mida soovid muuta.
+        - data (str): Info mida soovid faili sisestada
+        Returns:
+        - None
+        """
+        with open(json_file, 'w') as file:
+            json.dump(data, file, indent=4)
 
     def add_crypto(self):
         currency = self.name_entry.get().strip()
@@ -164,6 +238,9 @@ class CryptoApp:
 
                     self.log_transaction(f"Added {amount} of {currency}.")
                     self.update_holdings_display()
+
+                    self.save_to_json("current_holdings.json", self.holdings)
+
                 else:
                     self.log_transaction("Invalid name or amount for adding.")
             else:
@@ -183,9 +260,10 @@ class CryptoApp:
             if self.holdings[currency]['amount'] >= amount:
                 self.holdings[currency]['amount'] -= amount
                 self.log_transaction(f"Removed {amount} of {currency}.")
-                if self.holdings[currency]['amount'] == 0:
-                    del self.holdings[currency]
+
                 self.update_holdings_display()
+                self.save_to_json("current_holdings.json", self.holdings)
+
             else:
                 self.log_transaction(f"Not enough {currency} to remove {amount}.")
         else:
@@ -201,42 +279,49 @@ class CryptoApp:
         self.holdings_text.configure(state='normal')  # Enable editing
         self.holdings_text.delete("1.0", ctk.END)
         for name, data in self.holdings.items():
+
+            if data["amount"] == 0:
+                continue
+
             display_text = ""
-
+            print(self.holdings.items())
             if data['price'] != "N/A":
-
                 amount = str(data['amount']).replace(',', '')
                 price = str(data['price']).replace(',', '')
-                display_text = f"{(name).capitalize()}:\n" \
-                               f"   Amount: {data['amount']}\n" \
-                               f"   Worth: {float(amount) * float(price)}\n\n" \
+                display_text = f"{name.capitalize()}:\n" \
+                               f"  Amount: {data['amount']}\n" \
+                               f"  Worth: ${float(data['amount']) * float(price):,.2f} USD\n\n"
 
             else:
                 display_text = \
                     f"{name}:\n" \
                     f"Current holdings:\n    N/A\n     {data['amount']}\n"
 
-            if self.show_volume_var.get():
+            if self.settings["volume_cb"] == "on":
                 if data['volume'] == 'N/A':
                     display_text += f"  24-hour trading volume: N/A\n"
                 else:
                     display_text += f"  24-hour trading volume: ${data['volume']} USD\n"
-            if self.show_price_var.get():
+
+            if self.settings["price_cb"] == "on":
                 if data['price'] == 'N/A':
                     display_text += f"  Price: N/A\n"
                 else:
                     display_text += f"  Price: ${data['price']} USD\n"
-            if self.show_d1_var.get():
+
+            if self.settings["d1_cb"] == "on":
                 if data['d1'] == 'N/A':
                     display_text += f"  24h: N/A\n"
                 else:
                     display_text += f"  24h: {round(float(data['d1']), 2)}%\n"
-            if self.show_d7_var.get():
+
+            if self.settings["d7_cb"] == "on":
                 if data['d7'] == 'N/A':
                     display_text += f"  7d: N/A\n"
                 else:
                     display_text += f"  7d: {round(float(data['d7']), 2)}%\n"
-            if self.show_d30_var.get():
+
+            if self.settings["d30_cb"] == "on":
                 if data['d30'] == 'N/A':
                     display_text += f"  30d: N/A\n"
                 else:
@@ -250,4 +335,3 @@ if __name__ == "__main__":
     root = ctk.CTk()
     app = CryptoApp(root)
     root.mainloop()
-

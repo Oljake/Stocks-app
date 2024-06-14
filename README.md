@@ -4,6 +4,14 @@
 
 This project is a cryptocurrency price checking application that fetches data from CoinMarketCap for various cryptocurrencies. It extracts and displays key information such as **price**, **24-hour trading volume**, and percentage changes over different time periods.
 
+## User Interface
+
+![User_interface](https://github.com/Oljake/Stocks-app/assets/109909586/42b20b3c-9d83-47b8-9c71-a0b3cb2969aa)
+
+## Settings menu
+
+![Settings_menu](https://github.com/Oljake/Stocks-app/assets/109909586/22daf1c5-ebde-438e-858e-8a2e3f327632)
+
 ## Files
 
 - **crypto_names.json**: Contains a list of cryptocurrency names to monitor.

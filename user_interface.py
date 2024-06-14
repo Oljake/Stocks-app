@@ -7,7 +7,7 @@ import requests
 import json
 
 from get_data import get_crypto_data
-from new_coin import add_to_json
+from new_coin import read_from_json
 
 class CryptoApp:
 
@@ -324,25 +324,19 @@ class CryptoApp:
                                                    'd7': percentChange7d,
                                                    'd30': percentChange30d}
 
-                        # Log transaction ja andmete värskendamine
-                        self.log_transaction(f"Added {amount} of {currency}.")
-                        self.update_holdings_display()
+                    # Laeb uuendatud andmed JSON file'i
+                    self.save_to_json("current_holdings.json", self.holdings)
 
-                        # Laeb uuendatud andmed JSON file'i
-                        self.save_to_json("current_holdings.json", self.holdings)
-
-                        add_to_json([currency], "crypto_names.json")
+                    # Log transaction ja andmete värskendamine
+                    self.log_transaction(f"Added {amount} of {currency}.")
+                    self.update_holdings_display()
 
                 else:
                     self.log_transaction("Invalid name or amount for adding.")
-
-            # if response.status_code == 404:  # Kui tuleb 404 siis on link vale
-
             else:
                 self.log_transaction(f"crypto-currency not found or incorrect name. "
                                      f"Make sure it's listed \non the web: "
                                      f"https://coinmarketcap.com/currencies/")
-                
         except requests.exceptions.RequestException as e:
             self.log_transaction(f"Error fetching data from {url}: {str(e)}")
 

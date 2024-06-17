@@ -54,8 +54,15 @@ These features allow for easy management and updating of your cryptocurrency hol
 
 ## Dependencies
 
-- Python 3.x
-- Libraries: [requests](https://pypi.org/project/requests/) (for fetching data from URLs), [Beautiful Soup](https://pypi.org/project/beautifulsoup4/) (for HTML parsing)
+- Python 3.11
+
+### Installed Packages and Versions
+
+- **customtkinter**: 5.2.2
+- **requests**: 2.31.0
+- **bs4** (Beautiful Soup): 0.0.2
+
+These are the specific versions of Python and the libraries used in the application. Ensure that you have these versions installed or compatible versions when running the application.
 
 ## Notes
 

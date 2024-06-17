@@ -34,25 +34,7 @@ def get_crypto_data(currency_url: Response) -> CryptoData:
         percentChange7d_match = search(r"percentChange7d\":([\d,-]+\.\d+)", currency_url.text)
         percentChange30d_match = search(r"percentChange30d\":([\d,-]+\.\d+)", currency_url.text)
 
-        # Kui ei leia crypto-currency data osa siis return'ib "N/A"
-        price: str = "N/A"
-        volume: str = "N/A"
-        percentChange24h: str = "N/A"
-        percentChange7d: str = "N/A"
-        percentChange30d: str = "N/A"
-
-        # Kui leiab crypto-currency data osa
-        if price_match:
-            price = price_match.group(1)
-        if volume_match:
-            volume = volume_match.group(1)
-        if percentChange24h_match:
-            percentChange24h = percentChange24h_match.group(1)
-        if percentChange7d_match:
-            percentChange7d = percentChange7d_match.group(1)
-        if percentChange30d_match:
-            percentChange30d = percentChange30d_match.group(1)
-
+        # Return'ib leitud data või 'N/A'
         return CryptoData(
             price=price_match.group(1) if price_match else "N/A",
             volume=volume_match.group(1) if volume_match else "N/A",
@@ -61,14 +43,9 @@ def get_crypto_data(currency_url: Response) -> CryptoData:
             percentChange30d=percentChange30d_match.group(1) if percentChange30d_match else "N/A"
         )
 
-
-
     except Exception as e:
-
         print("Most likely incorrect link.")
-
-        print(f"get_data -> get_crypto_data:\n   {e}.\n\n")
-
+        print(f"get_crypto_data error: {e}")
         return CryptoData()
 
 # Example usage

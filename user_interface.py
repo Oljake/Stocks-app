@@ -25,10 +25,10 @@ class CryptoApp:
         self.entry_label = ctk.CTkLabel(master=self.entry_frame, text="Crypto-Currency")
         self.entry_label.pack(pady=5)
 
-        self.name_entry = ctk.CTkEntry(master=self.entry_frame)
+        self.name_entry = ctk.CTkEntry(master=self.entry_frame, placeholder_text="Crypto-Currency", justify="center")
         self.name_entry.pack(pady=5)
 
-        self.amount_entry = ctk.CTkEntry(master=self.entry_frame)
+        self.amount_entry = ctk.CTkEntry(master=self.entry_frame, placeholder_text="Amount", justify="center")
         self.amount_entry.pack(pady=5)
 
         # Add / Remove Buttons

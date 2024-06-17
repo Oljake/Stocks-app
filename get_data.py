@@ -53,14 +53,23 @@ def get_crypto_data(currency_url: Response) -> CryptoData:
         if percentChange30d_match:
             percentChange30d = percentChange30d_match.group(1)
 
-        return price, volume, percentChange24h, percentChange7d, percentChange30d
+        return CryptoData(
+            price=price_match.group(1) if price_match else "N/A",
+            volume=volume_match.group(1) if volume_match else "N/A",
+            percentChange24h=percentChange24h_match.group(1) if percentChange24h_match else "N/A",
+            percentChange7d=percentChange7d_match.group(1) if percentChange7d_match else "N/A",
+            percentChange30d=percentChange30d_match.group(1) if percentChange30d_match else "N/A"
+        )
 
 
-    except (TypeError, UnboundLocalError) as e:
+
+    except Exception as e:
+
         print("Most likely incorrect link.")
+
         print(f"get_data -> get_crypto_data:\n   {e}.\n\n")
 
-        return "N/A", "N/A", "N/A", "N/A", "N/A"
+        return CryptoData()
 
 # Example usage
 if __name__ == "__main__":

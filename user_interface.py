@@ -398,7 +398,7 @@ class CryptoApp:
 
                 # Ümardab kui väärtus on 1 või rohkem
                 if worth >= 1:
-                    formatted_worth = f"${worth:.2f} USD"
+                    formatted_worth = f"${worth:,.2f} USD"
                 else:
                     formatted_worth = f"${worth} USD"
 

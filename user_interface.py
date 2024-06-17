@@ -113,7 +113,13 @@ class CryptoApp:
                 if response.status_code == 200:
 
                     # Extract'ib data
-                    price, volume, percentChange24h, percentChange7d, percentChange30d = get_crypto_data(response)
+                    crypto_data = get_crypto_data(response)
+
+                    price = crypto_data.price
+                    volume = crypto_data.volume
+                    percentChange24h = crypto_data.percentChange24h
+                    percentChange7d = crypto_data.percentChange7d
+                    percentChange30d = crypto_data.percentChange30d
 
                     if currency and amount > 0:
 
@@ -305,7 +311,15 @@ class CryptoApp:
         try:
             response = requests.get(url)
             if response.status_code == 200:
-                price, volume, percentChange24h, percentChange7d, percentChange30d = get_crypto_data(response)
+
+                # Extract'ib data
+                crypto_data = get_crypto_data(response)
+
+                price = crypto_data.price
+                volume = crypto_data.volume
+                percentChange24h = crypto_data.percentChange24h
+                percentChange7d = crypto_data.percentChange7d
+                percentChange30d = crypto_data.percentChange30d
                 if currency and amount > 0:
 
                     # Lisab uue koguse ja muudab teised andmeid vastavalt Web'ile
